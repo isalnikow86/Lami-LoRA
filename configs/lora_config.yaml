@@ -1,4 +1,4 @@
-base_model: TheBloke/LeoLM-7B-GGUF
+base_model: LeoLM/leo-hessianai-7b
 output_dir: lora-outputs/
 learning_rate: 5e-5
 batch_size: 32
