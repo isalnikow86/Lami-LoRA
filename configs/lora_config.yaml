@@ -1,4 +1,7 @@
-base_model: TheBloke/LeoLM-7B-GGUF output_dir: lora-outputs/ learning_rate: 5e-5 batch_size: 32 num_train_epochs: 3 logging_steps: 10 
+base_model: TheBloke/LeoLM-7B-GGUF
+output_dir: lora-outputs/
+learning_rate: 5e-5
+batch_size: 32
+num_train_epochs: 3
+logging_steps: 10
 save_steps: 100
-ø
-
