@@ -25,6 +25,10 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 
+# Ensure tokenizer has a pad_token
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+
 # Prepare model for k-bit training (8bit)
 model = prepare_model_for_kbit_training(model)
 
