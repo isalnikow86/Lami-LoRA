@@ -29,10 +29,11 @@ training_args = TrainingArguments(
 # Define Data Collator
 def data_collator(features):
     batch = {}
-    batch["input_ids"] = [f["input_ids"] for f in features]
-    batch["attention_mask"] = [f["attention_mask"] for f in features]
-    batch["labels"] = batch["input_ids"].copy()  # wichtig für Causal LM
-    return {k: torch.tensor(v) for k, v in batch.items()}
+    batch["input_ids"] = torch.tensor([f["input_ids"] for f in features], dtype=torch.long)
+    batch["attention_mask"] = torch.tensor([f["attention_mask"] for f in features], dtype=torch.long)
+    batch["labels"] = batch["input_ids"].clone()
+    return batch
+
 
 # Define Trainer
 trainer = Trainer(
