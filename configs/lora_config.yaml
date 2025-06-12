@@ -1,7 +1,7 @@
 base_model: LeoLM/leo-hessianai-7b
 output_dir: lora-outputs/
 learning_rate: 5e-5
-batch_size: 16   # bei H100 besser 16-32 → 16 ist sicher!
+batch_size: 8   # bei H100 besser 16-32 → 16 ist sicher!
 num_train_epochs: 3
 logging_steps: 10
 save_steps: 100
