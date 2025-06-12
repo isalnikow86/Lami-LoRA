@@ -60,9 +60,12 @@ def data_collator(features):
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=dataset,
-    data_collator=data_collator,
+    train_dataset=dataset["train"],
+    eval_dataset=dataset["validation"],
+    tokenizer=tokenizer,
+    gradient_checkpointing=True,  # <== HIER ergänzen!
 )
+
 
 # Train
 trainer.train()
