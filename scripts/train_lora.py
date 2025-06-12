@@ -12,6 +12,10 @@ with open("configs/lora_config.yaml") as f:
 model = AutoModelForCausalLM.from_pretrained(config["base_model"])
 tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 
+if tokenizer.pad_token_id is None:
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    print(f"Set pad_token_id to eos_token_id ({tokenizer.pad_token_id})")
+
 # Load dataset
 dataset = load_from_disk("data/tokenized_klexikon_dataset")
 
