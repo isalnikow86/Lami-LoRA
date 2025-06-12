@@ -10,12 +10,6 @@ from transformers import BitsAndBytesConfig
 with open("configs/lora_config.yaml") as f:
     config = yaml.safe_load(f)
 
-# BitsAndBytes config → 4-bit oder 8-bit Loading
-bnb_config = BitsAndBytesConfig(
-    load_in_8bit=True,    # das brauchst du!
-    llm_int8_threshold=6.0,
-    llm_int8_has_fp16_weight=True,
-)
 
 # Load model + tokenizer
 model = AutoModelForCausalLM.from_pretrained(
