@@ -5,6 +5,8 @@ from transformers import AutoTokenizer
 MODEL_NAME = "LeoLM/leo-hessianai-7b"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+tokenizer.pad_token = tokenizer.eos_token
+
 
 # Load Klexikon data
 with open("data/klexikon_texts.jsonl", "r", encoding="utf-8") as f:
