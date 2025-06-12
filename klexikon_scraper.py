@@ -4,40 +4,34 @@ import json
 import time
 
 BASE_URL = "https://klexikon.zum.de"
-CATEGORY_URLS = [
-    "https://klexikon.zum.de/wiki/Kategorie:Artikel",
-    "https://klexikon.zum.de/wiki/Kategorie:Sachartikel",
-    "https://klexikon.zum.de/wiki/Kategorie:Biografien"
-]
+CATEGORY_URL = "https://klexikon.zum.de/wiki/Kategorie:Klexikon-Artikel"
 
 def get_article_links():
-    print("Fetching article links from categories...")
+    print("Fetching article links from Kategorie:Klexikon-Artikel ...")
     links = []
+    next_page = CATEGORY_URL
 
-    for category_url in CATEGORY_URLS:
-        print(f"Processing category: {category_url}")
-        next_page = category_url
+    while next_page:
+        print(f"Processing page: {next_page}")
+        r = requests.get(next_page)
+        soup = BeautifulSoup(r.text, "html.parser")
+        page_links = [
+            BASE_URL + a["href"]
+            for a in soup.select("div#mw-pages li a")
+            if a["href"].startswith("/wiki/")
+        ]
+        links.extend(page_links)
 
-        while next_page:
-            r = requests.get(next_page)
-            soup = BeautifulSoup(r.text, "html.parser")
-            page_links = [
-                BASE_URL + a["href"]
-                for a in soup.select("div#mw-pages li a")
-                if a["href"].startswith("/wiki/")
-            ]
-            links.extend(page_links)
+        # Find "nächste Seite" link → robust
+        next_link = None
+        for a in soup.select("div#mw-pages a"):
+            if "nächste seite" in a.text.lower():
+                next_link = BASE_URL + a["href"]
+                print(f"Found next page: {next_link}")
+                break
 
-            # Find "nächste Seite" link if available
-            nav_links = soup.select("div#mw-pages a")
-            next_page = None
-            for link in nav_links:
-                if "nächste seite" in link.text.lower():
-                    next_page = BASE_URL + link["href"]
-                    print(f"Found next page: {next_page}")
-                    break
-
-            time.sleep(0.5)  # polite crawling
+        next_page = next_link
+        time.sleep(0.5)  # polite crawling
 
     return list(set(links))  # remove duplicates
 
