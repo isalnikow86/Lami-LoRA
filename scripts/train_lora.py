@@ -57,6 +57,7 @@ training_args = TrainingArguments(
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
     save_steps=config["save_steps"],
+    gradient_checkpointing=False,
     bf16=True,  # H100 optimal
     gradient_accumulation_steps=8,
     warmup_steps=100,
