@@ -1,18 +1,36 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+import time
 
-BASE_URL = "https://klexikon.zum.de/wiki/"
-ARTICLE_LIST_URL = "https://klexikon.zum.de/wiki/Kategorie:Artikel"
+BASE_URL = "https://klexikon.zum.de"
+
+SITEMAP_URL = "https://klexikon.zum.de/wiki/Spezial:Alle_Seiten"
 
 def get_article_links():
-    r = requests.get(ARTICLE_LIST_URL)
-    soup = BeautifulSoup(r.text, "html.parser")
-    links = [
-        "https://klexikon.zum.de" + a["href"]
-        for a in soup.select("div#mw-pages a")
-        if a["href"].startswith("/wiki/")
-    ]
+    print("Fetching article links from sitemap...")
+    links = []
+    next_page = SITEMAP_URL
+
+    while next_page:
+        print(f"Processing page: {next_page}")
+        r = requests.get(next_page)
+        soup = BeautifulSoup(r.text, "html.parser")
+        page_links = [
+            BASE_URL + a["href"]
+            for a in soup.select("div.mw-allpages-body ul li a")
+            if a["href"].startswith("/wiki/")
+        ]
+        links.extend(page_links)
+
+        # Check for next page link
+        next_link = soup.select_one("div.mw-allpages-nav a[title='Spezial:Alle Seiten']")
+        if next_link and "weiter" in next_link.text.lower():
+            next_page = BASE_URL + next_link["href"]
+            time.sleep(0.5)  # polite crawling
+        else:
+            next_page = None
+
     return links
 
 def scrape_article(url):
@@ -27,11 +45,11 @@ def main():
     links = get_article_links()
     print(f"Found {len(links)} articles.")
     with open("data/klexikon_texts.jsonl", "w", encoding="utf-8") as f:
-        for link in links:
+        for i, link in enumerate(links, 1):
             article = scrape_article(link)
             json.dump(article, f, ensure_ascii=False)
             f.write("\n")
-            print(f"Saved: {article['title']}")
+            print(f"[{i}/{len(links)}] Saved: {article['title']}")
 
 if __name__ == "__main__":
     main()
