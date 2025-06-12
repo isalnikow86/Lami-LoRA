@@ -20,9 +20,11 @@ bnb_config = BitsAndBytesConfig(
 # Load model + tokenizer
 model = AutoModelForCausalLM.from_pretrained(
     config["base_model"],
-    device_map="auto",         # wichtig für multi-GPU falls nötig
-    quantization_config=bnb_config
+    device_map="auto",
+    torch_dtype=torch.float16,
+    load_in_8bit=False   # <== das ist der entscheidende Punkt!
 )
+
 tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 
 # Ensure tokenizer has a pad_token
