@@ -15,6 +15,11 @@ tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 # Load dataset
 dataset = load_from_disk("data/tokenized_klexikon_dataset")
 
+# Optional: Split into train / validation
+split_dataset = dataset.train_test_split(test_size=0.05)
+train_dataset = split_dataset["train"]
+eval_dataset = split_dataset["test"]
+
 # Define TrainingArguments
 training_args = TrainingArguments(
     output_dir=config["output_dir"],
@@ -23,27 +28,34 @@ training_args = TrainingArguments(
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
     save_steps=config["save_steps"],
-    gradient_checkpointing=True,   # richtig hier
+    gradient_checkpointing=True,
+    fp16=True,  # automatic mixed precision → VRAM sparen!
 )
 
 # Define Data Collator
 def data_collator(features):
     batch = {}
-    batch["input_ids"] = torch.stack([torch.tensor(f["input_ids"], dtype=torch.long) for f in features])
-    batch["attention_mask"] = torch.stack([torch.tensor(f["attention_mask"], dtype=torch.long) for f in features])
+    batch["input_ids"] = torch.nn.utils.rnn.pad_sequence(
+        [torch.tensor(f["input_ids"], dtype=torch.long) for f in features],
+        batch_first=True,
+        padding_value=tokenizer.pad_token_id
+    )
+    batch["attention_mask"] = torch.nn.utils.rnn.pad_sequence(
+        [torch.tensor(f["attention_mask"], dtype=torch.long) for f in features],
+        batch_first=True,
+        padding_value=0
+    )
     batch["labels"] = batch["input_ids"].clone()
     return batch
-
-
 
 # Define Trainer
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=dataset.with_format("torch"),
-    eval_dataset=None,  # Keine Validation
+    train_dataset=train_dataset.with_format("torch"),
+    eval_dataset=eval_dataset.with_format("torch"),
     tokenizer=tokenizer,
-    data_collator=data_collator,  # wichtig!
+    data_collator=data_collator,
 )
 
 # Run training
