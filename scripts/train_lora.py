@@ -29,10 +29,11 @@ training_args = TrainingArguments(
 # Define Data Collator
 def data_collator(features):
     batch = {}
-    batch["input_ids"] = torch.tensor([f["input_ids"] for f in features], dtype=torch.long)
-    batch["attention_mask"] = torch.tensor([f["attention_mask"] for f in features], dtype=torch.long)
+    batch["input_ids"] = torch.stack([torch.tensor(f["input_ids"], dtype=torch.long) for f in features])
+    batch["attention_mask"] = torch.stack([torch.tensor(f["attention_mask"], dtype=torch.long) for f in features])
     batch["labels"] = batch["input_ids"].clone()
     return batch
+
 
 
 # Define Trainer
