@@ -18,7 +18,7 @@ dataset = load_from_disk("data/tokenized_klexikon_dataset")
 # Define TrainingArguments
 training_args = TrainingArguments(
     output_dir=config["output_dir"],
-    learning_rate=config["learning_rate"],
+    learning_rate = float(config["learning_rate"]),
     per_device_train_batch_size=config["batch_size"],
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
