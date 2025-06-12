@@ -1,8 +1,14 @@
-# Lami-LoRA
-LoRA-Training-Projekt für LeoLM 7B GGUF auf Basis kindgerechter deutscher Texte.
-## Struktur
-- `klexikon_scraper.py` → lädt Klexikon Texte herunter - `data/klexikon_texts.jsonl` → gespeicherte Texte - 
-`scripts/prepare_lora_data.py` → bereitet Dataset für Training vor - `scripts/train_lora.sh` → startet das Training - 
-`configs/lora_config.yaml` → Konfiguration für das Training - `requirements.txt` → benötigte Python Libraries
-## Workflow
-1. Klexikon Texte laden: ```bash python klexikon_scraper.py
+# Lami-LoRA — LeoLM 7B LoRA Training (Klexikon Dataset)
+
+## 🔍 Overview
+
+This repo trains a **LoRA adapter** on the **LeoLM/leo-hessianai-7b** model using **Klexikon data** (German children's encyclopedia) on **H100** GPU.
+
+## 🚀 Steps to run training
+
+### 1️⃣ Clone repo & prepare environment
+
+```bash
+git clone https://github.com/isalinkow86/Lami-LoRA.git
+cd Lami-LoRA
+pip install -r requirements.txt
