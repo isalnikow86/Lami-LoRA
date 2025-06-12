@@ -4,36 +4,42 @@ import json
 import time
 
 BASE_URL = "https://klexikon.zum.de"
-SITEMAP_URL = "https://klexikon.zum.de/wiki/Spezial:Alle_Seiten"
+CATEGORY_URLS = [
+    "https://klexikon.zum.de/wiki/Kategorie:Artikel",
+    "https://klexikon.zum.de/wiki/Kategorie:Sachartikel",
+    "https://klexikon.zum.de/wiki/Kategorie:Biografien"
+]
 
 def get_article_links():
-    print("Fetching article links from sitemap...")
+    print("Fetching article links from categories...")
     links = []
-    next_page = SITEMAP_URL
 
-    while next_page:
-        print(f"Processing page: {next_page}")
-        r = requests.get(next_page)
-        soup = BeautifulSoup(r.text, "html.parser")
-        page_links = [
-            BASE_URL + a["href"]
-            for a in soup.select("div.mw-allpages-body ul li a")
-            if a["href"].startswith("/wiki/")
-        ]
-        links.extend(page_links)
+    for category_url in CATEGORY_URLS:
+        print(f"Processing category: {category_url}")
+        next_page = category_url
 
-        # Find the "weiter" link in navigation
-        nav_links = soup.select("div.mw-allpages-nav a")
-        next_page = None
-        for link in nav_links:
-            if "weiter" in link.text.lower():
-                next_page = BASE_URL + link["href"]
-                break
+        while next_page:
+            r = requests.get(next_page)
+            soup = BeautifulSoup(r.text, "html.parser")
+            page_links = [
+                BASE_URL + a["href"]
+                for a in soup.select("div#mw-pages li a")
+                if a["href"].startswith("/wiki/")
+            ]
+            links.extend(page_links)
 
-        # polite crawling → avoid hammering the server
-        time.sleep(0.5)
+            # Find "nächste Seite" link if available
+            nav_links = soup.select("div#mw-pages a")
+            next_page = None
+            for link in nav_links:
+                if "nächste seite" in link.text.lower():
+                    next_page = BASE_URL + link["href"]
+                    print(f"Found next page: {next_page}")
+                    break
 
-    return links
+            time.sleep(0.5)  # polite crawling
+
+    return list(set(links))  # remove duplicates
 
 def scrape_article(url):
     r = requests.get(url)
