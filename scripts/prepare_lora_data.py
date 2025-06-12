@@ -2,7 +2,7 @@ import json
 from datasets import Dataset
 from transformers import AutoTokenizer
 
-MODEL_NAME = "TheBloke/LeoLM-7B-GGUF"
+MODEL_NAME = "LeoLM/leo-hessianai-7b"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
