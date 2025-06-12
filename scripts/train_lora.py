@@ -60,11 +60,12 @@ def data_collator(features):
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset = dataset.with_format("torch"),
-    eval_dataset=dataset["validation"],
+    train_dataset=dataset.with_format("torch"),
+    eval_dataset=None,  # Keine Validation!
     tokenizer=tokenizer,
-    gradient_checkpointing=True,  # <== HIER ergänzen!
+    gradient_checkpointing=True,
 )
+
 
 
 # Train
