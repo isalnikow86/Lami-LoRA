@@ -3,37 +3,62 @@ import yaml
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainingArguments
 from datasets import load_from_disk
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from transformers import BitsAndBytesConfig
 
 # Load config
 with open("configs/lora_config.yaml") as f:
     config = yaml.safe_load(f)
 
+# BitsAndBytes config → 4-bit oder 8-bit Loading
+bnb_config = BitsAndBytesConfig(
+    load_in_8bit=True,    # das brauchst du!
+    llm_int8_threshold=6.0,
+    llm_int8_has_fp16_weight=True,
+)
+
 # Load model + tokenizer
-model = AutoModelForCausalLM.from_pretrained(config["base_model"])
+model = AutoModelForCausalLM.from_pretrained(
+    config["base_model"],
+    device_map="auto",         # wichtig für multi-GPU falls nötig
+    quantization_config=bnb_config
+)
 tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 
-if tokenizer.pad_token_id is None:
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    print(f"Set pad_token_id to eos_token_id ({tokenizer.pad_token_id})")
+# Prepare model for k-bit training (8bit)
+model = prepare_model_for_kbit_training(model)
+
+# Setup LoRA config
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],  # bei LeoLM / LLaMA
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+# Apply LoRA
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()
 
 # Load dataset
 dataset = load_from_disk("data/tokenized_klexikon_dataset")
 
-# Optional: Split into train / validation
-split_dataset = dataset.train_test_split(test_size=0.05)
-train_dataset = split_dataset["train"]
-eval_dataset = split_dataset["test"]
-
 # Define TrainingArguments
 training_args = TrainingArguments(
     output_dir=config["output_dir"],
-    learning_rate = float(config["learning_rate"]),
+    learning_rate=float(config["learning_rate"]),
     per_device_train_batch_size=config["batch_size"],
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
     save_steps=config["save_steps"],
-    gradient_checkpointing=True,
-    fp16=True,  # automatic mixed precision → VRAM sparen!
+    bf16=True,  # H100 optimal
+    gradient_accumulation_steps=8,
+    warmup_steps=100,
+    weight_decay=0.01,
+    optim="paged_adamw_8bit",  # wichtig für stability
+    logging_dir="./logs",
 )
 
 # Define Data Collator
@@ -42,12 +67,12 @@ def data_collator(features):
     batch["input_ids"] = torch.nn.utils.rnn.pad_sequence(
         [torch.tensor(f["input_ids"], dtype=torch.long) for f in features],
         batch_first=True,
-        padding_value=tokenizer.pad_token_id
+        padding_value=tokenizer.pad_token_id,
     )
     batch["attention_mask"] = torch.nn.utils.rnn.pad_sequence(
         [torch.tensor(f["attention_mask"], dtype=torch.long) for f in features],
         batch_first=True,
-        padding_value=0
+        padding_value=0,
     )
     batch["labels"] = batch["input_ids"].clone()
     return batch
@@ -56,8 +81,8 @@ def data_collator(features):
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset.with_format("torch"),
-    eval_dataset=eval_dataset.with_format("torch"),
+    train_dataset=dataset.with_format("torch"),
+    eval_dataset=None,
     tokenizer=tokenizer,
     data_collator=data_collator,
 )
