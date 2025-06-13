@@ -4,9 +4,40 @@ import json
 
 # Beispielquelle: ZUM.de OER Bereich (kannst du später erweitern)
 OER_URLS = [
-    "https://www.zum.de/wiki/ZUM-Kinderlexikon",  # als Beispiel
-    # Hier später weitere OER Quellen ergänzen
+    # ZUM-Kinderlexikon → Startseite
+    "https://www.zum.de/wiki/ZUM-Kinderlexikon",
+    
+    # Beispielthemen im ZUM-Kinderlexikon → gut scrapen:
+    "https://www.zum.de/wiki/Kategorie:Klexikon-Artikel",
+    "https://www.zum.de/wiki/Kategorie:Sachartikel",
+    "https://www.zum.de/wiki/Kategorie:Biografien",
+    
+    # WirLernenOnline.de → OER für Grundschule:
+    "https://wirlernenonline.de/lernen/kinderwissen/natur-und-umwelt/",
+    "https://wirlernenonline.de/lernen/kinderwissen/tiere/",
+    "https://wirlernenonline.de/lernen/kinderwissen/technik/",
+    "https://wirlernenonline.de/lernen/kinderwissen/geschichte/",
+    "https://wirlernenonline.de/lernen/kinderwissen/erde-und-weltall/",
+    
+    # Kindersache.de (OER / CC Inhalte → explizit erlaubt):
+    "https://www.kindersache.de/bereiche/wissen",
+    
+    # Hanisauland.de (OER / kindgerechte Politik):
+    "https://www.hanisauland.de/wissen/lexikon",
+    
+    # Planet Schule → kindgerechte Inhalte (viel CC):
+    "https://www.planet-schule.de/sf/filme-online.php",  # hier musst du dann **Textseiten raussuchen**, keine Videos
+    
+    # FragFinn.de → kindgerechte Fragen und Antworten:
+    "https://www.fragfinn.de/",
+    
+    # Geolino (CC Inhalte → viele Artikel frei nutzbar):
+    "https://www.geo.de/geolino",
+    
+    # Kinder-FAQ vom SWR Kindernetz:
+    "https://www.kindernetz.de/wissen/frage-trifft-antwort-102.html",
 ]
+
 
 def scrape_text_from_url(url):
     try:
