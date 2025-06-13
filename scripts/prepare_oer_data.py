@@ -4,20 +4,6 @@ import json
 
 # Beispielquelle: ZUM.de OER Bereich (kannst du später erweitern)
 OER_URLS = [
-    # ZUM-Kinderlexikon → Startseite
-    "https://www.zum.de/wiki/ZUM-Kinderlexikon",
-    
-    # Beispielthemen im ZUM-Kinderlexikon → gut scrapen:
-    "https://www.zum.de/wiki/Kategorie:Klexikon-Artikel",
-    "https://www.zum.de/wiki/Kategorie:Sachartikel",
-    "https://www.zum.de/wiki/Kategorie:Biografien",
-    
-    # WirLernenOnline.de → OER für Grundschule:
-    "https://wirlernenonline.de/lernen/kinderwissen/natur-und-umwelt/",
-    "https://wirlernenonline.de/lernen/kinderwissen/tiere/",
-    "https://wirlernenonline.de/lernen/kinderwissen/technik/",
-    "https://wirlernenonline.de/lernen/kinderwissen/geschichte/",
-    "https://wirlernenonline.de/lernen/kinderwissen/erde-und-weltall/",
     
     # Kindersache.de (OER / CC Inhalte → explizit erlaubt):
     "https://www.kindersache.de/bereiche/wissen",
