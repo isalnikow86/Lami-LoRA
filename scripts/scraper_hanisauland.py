@@ -35,10 +35,13 @@ def get_links(letter):
 
 def scrape_article(url):
     try:
+        # vollständige URL aufbauen
+        if not url.startswith("http"):
+            url = BASE_URL + url
+
         res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # robuster Content-Selector
         content = soup.select_one("main div.text") or soup.select_one("div.text")
         title = soup.title.text.strip() if soup.title else "No title"
 
@@ -53,8 +56,8 @@ def scrape_article(url):
 
     except Exception as e:
         print(f"⚠ Fehler bei Artikel {url}: {e}")
-
     return None
+
 
 
 
