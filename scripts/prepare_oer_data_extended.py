@@ -3,35 +3,37 @@ from bs4 import BeautifulSoup
 import json
 import time
 
-# Konfiguration pro Quelle
 OER_SOURCES = [
     {
         "name": "kindersache",
         "base_url": "https://www.kindersache.de",
-        "start_paths": ["/bereiche/wissen/natur-und-mensch"],
+        "start_paths": [
+            "/bereiche/wissen/natur-und-mensch",
+            "/bereiche/wissen/politik"
+        ],
         "article_selector": "div.view-content a",
         "content_selector": "div.field--name-body"
     },
     {
         "name": "hanisauland",
         "base_url": "https://www.hanisauland.de",
-        "start_paths": [f"/wissen/lexikon/grosses-lexikon/{chr(i)}" for i in range(97, 123)],
+        "start_paths": [
+            f"/wissen/lexikon/grosses-lexikon/{chr(c)}" for c in range(ord('a'), ord('z')+1)
+        ],
         "article_selector": "ul.linklist__list a",
         "content_selector": "div.text"
     },
     {
         "name": "geo",
         "base_url": "https://www.geo.de",
-        "start_paths": ["/geolino/tierlexikon", "/geolino/mensch"],
+        "start_paths": [
+            "/geolino/tierlexikon",
+            "/geolino/mensch"
+        ],
         "article_selector": "a.m-teaser",
         "content_selector": "div.c-article-text"
     }
 ]
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36"
-}
-
 
 def scrape_articles(source):
     articles = []
@@ -47,7 +49,7 @@ def scrape_articles(source):
                 return
             visited.add(full_url)
 
-            res = requests.get(full_url, headers=HEADERS, timeout=10)
+            res = requests.get(full_url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             content = soup.select_one(source["content_selector"])
             if not content:
@@ -69,13 +71,11 @@ def scrape_articles(source):
 
     def collect_links(base_path):
         try:
-            url = source["base_url"] + base_path
-            res = requests.get(url, headers=HEADERS, timeout=10)
+            res = requests.get(source["base_url"] + base_path, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
             links = [a.get("href") for a in soup.select(source["article_selector"])]
-            return [l for l in links if l and "/" in l]
-        except Exception as e:
-            print(f"⚠ Fehler beim Sammeln von Links unter {base_path}: {e}")
+            return [l for l in links if l and "/" in l and not l.startswith("?")]
+        except:
             return []
 
     if "start_paths" in source:
@@ -84,14 +84,17 @@ def scrape_articles(source):
             print(f"🔍 {len(links)} Links gefunden auf {path}")
             for link in links:
                 scrape_page(link)
+    else:
+        links = collect_links(source["start_path"])
+        print(f"🔍 {len(links)} Links gefunden auf {source['start_path']}")
+        for link in links:
+            scrape_page(link)
 
     return articles
-
 
 if __name__ == "__main__":
     print("\n▶ Starte OER-Scraping...")
     all_articles = []
-
     for src in OER_SOURCES:
         print(f"\n🌐 {src['name']}...")
         data = scrape_articles(src)
