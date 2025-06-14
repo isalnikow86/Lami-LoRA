@@ -6,19 +6,32 @@ import string
 
 BASE_URL = "https://www.hanisauland.de"
 LEXIKON_BASE = "/wissen/lexikon/grosses-lexikon/"
-
 OUTPUT_FILE = "data/oer_texts_hanisauland.jsonl"
 
+
 def get_links(letter):
-    url = BASE_URL + LEXIKON_BASE + letter
+    url = BASE_URL + LEXIKON_BASE + letter + "/"
+    print(f"🔍 Lade {url}")
     try:
         res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = [a.get("href") for a in soup.select("a.linklist__link")]
-        return [l for l in links if l and l.endswith(".html")]
+
+        # Debug-Ausgabe
+        with open(f"debug_hanisauland_{letter}.html", "w") as f:
+            f.write(res.text)
+
+        # Links extrahieren aus Teasern
+        links = []
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if href.startswith(LEXIKON_BASE + letter + "/") and href.endswith(".html"):
+                links.append(href)
+
+        return list(set(links))
     except Exception as e:
         print(f"⚠ Fehler beim Laden der Seite {url}: {e}")
         return []
+
 
 def scrape_article(relative_url):
     full_url = BASE_URL + relative_url
@@ -31,9 +44,14 @@ def scrape_article(relative_url):
             text = content.get_text(separator="\n").strip()
             if len(text) > 200:
                 return {"url": full_url, "title": title, "text": text}
+            else:
+                print(f"⚠ Artikel zu kurz: {full_url}")
+        else:
+            print(f"⚠ Kein Content gefunden: {full_url}")
     except Exception as e:
         print(f"⚠ Fehler bei Artikel {full_url}: {e}")
     return None
+
 
 if __name__ == "__main__":
     print("▶ Starte Scraping hanisauland.de (Großes Lexikon)...\n")
@@ -49,8 +67,7 @@ if __name__ == "__main__":
             if data:
                 all_articles.append(data)
                 print(f"✅ {data['title']}")
-
-            time.sleep(0.3)  # schonend scrapen
+            time.sleep(0.3)
 
     with open(OUTPUT_FILE, "w") as f:
         for item in all_articles:
