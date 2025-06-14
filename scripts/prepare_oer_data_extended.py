@@ -3,95 +3,99 @@ from bs4 import BeautifulSoup
 import json
 import time
 
-OUTPUT_PATH = "data/oer_texts.jsonl"
-
-# Zielbereiche definieren
-TARGETS = {
-    "kindersache.de": {
-        "base": "https://www.kindersache.de",
-        "start": "https://www.kindersache.de/bereiche/wissen/natur-und-mensch",
-        "include": ["/bereiche/wissen/natur-und-mensch"],
+OER_SOURCES = [
+    {
+        "name": "kindersache",
+        "base_url": "https://www.kindersache.de",
+        "start_path": "/bereiche/wissen/natur-und-mensch",
+        "article_selector": "div.view-content a",
+        "content_selector": "div.field--name-body"
     },
-    "hanisauland.de": {
-        "base": "https://www.hanisauland.de",
-        "start": "https://www.hanisauland.de/wissen/lexikon/grosses-lexikon/a",
-        "include": ["/wissen/lexikon/grosses-lexikon/"],
+    {
+        "name": "hanisauland",
+        "base_url": "https://www.hanisauland.de",
+        "start_path": "/wissen/lexikon/grosses-lexikon/a",
+        "article_selector": "ul.linklist__list a",
+        "content_selector": "div.text"
     },
-    "geo.de": {
-        "base": "https://www.geo.de",
-        "start": "https://www.geo.de/geolino/tierlexikon",
-        "include": ["/geolino/tierlexikon", "/geolino/mensch"],
+    {
+        "name": "geo",
+        "base_url": "https://www.geo.de",
+        "start_paths": [
+            "/geolino/tierlexikon",
+            "/geolino/mensch"
+        ],
+        "article_selector": "a.m-teaser",
+        "content_selector": "div.c-article-text"
     }
-}
+]
 
-def fetch_article(url):
-    try:
-        response = requests.get(url)
-        if response.status_code != 200:
-            return None
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Extrahiere sichtbaren Text
-        article = soup.find("article") or soup.find("main")
-        if not article:
-            return None
-        text = article.get_text(separator="\n", strip=True)
-        if len(text) < 200:
-            return None
-        title = soup.title.string if soup.title else ""
-        return {"url": url, "title": title, "text": text}
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return None
-
-def collect_links(base_url, start_url, includes):
+def scrape_articles(source):
+    articles = []
     visited = set()
-    to_visit = [start_url]
-    found_links = []
+    counter = 0
+    limit = 50
 
-    while to_visit:
-        url = to_visit.pop()
-        if url in visited:
-            continue
-        visited.add(url)
-        print(f"🔎 Scanning {url}")
+    def scrape_page(url):
+        nonlocal counter
         try:
-            response = requests.get(url)
-            if response.status_code != 200:
-                continue
-            soup = BeautifulSoup(response.text, "html.parser")
-            for a in soup.find_all("a", href=True):
-                href = a["href"]
-                if href.startswith("/") and any(inc in href for inc in includes):
-                    full_url = base_url + href
-                    if full_url not in visited and full_url not in to_visit:
-                        to_visit.append(full_url)
-                        if href.count("/") >= 4:  # primitive Artikel-Filterung
-                            found_links.append(full_url)
+            full_url = url if url.startswith("http") else source["base_url"] + url
+            if full_url in visited:
+                return
+            visited.add(full_url)
+
+            res = requests.get(full_url, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            content = soup.select_one(source["content_selector"])
+            if not content:
+                return
+
+            title = soup.title.text.strip() if soup.title else "No title"
+            text = content.get_text(separator="\n").strip()
+
+            if len(text) > 200:
+                articles.append({"url": full_url, "title": title, "text": text})
+                counter += 1
+                print(f"✅ [{counter}] {title}")
+
+                if counter % limit == 0:
+                    print(f"🔁 {limit} Artikel gespeichert… fahre automatisch fort…")
+
         except Exception as e:
-            print(f"Failed to scan {url}: {e}")
-            continue
-        time.sleep(0.5)
-    return list(set(found_links))
+            print(f"⚠ Fehler bei {url}: {e}")
 
-def main():
-    all_articles = []
-    print("\n✏ Starte OER-Scraping...")
-    for domain, config in TARGETS.items():
-        print(f"\n🌐 {domain}...")
-        links = collect_links(config["base"], config["start"], config["include"])
-        print(f"→ {len(links)} potenzielle Artikel gefunden")
-        for url in links:
-            art = fetch_article(url)
-            if art:
-                all_articles.append(art)
-            time.sleep(0.2)
+    def collect_links(base_path):
+        try:
+            res = requests.get(source["base_url"] + base_path, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+            links = [a.get("href") for a in soup.select(source["article_selector"])]
+            return [l for l in links if l and "/" in l]
+        except:
+            return []
 
-    print(f"\n✅ Fertig! {len(all_articles)} Artikel gespeichert unter {OUTPUT_PATH}")
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        for entry in all_articles:
-            json.dump(entry, f, ensure_ascii=False)
-            f.write("\n")
+    if "start_paths" in source:
+        for path in source["start_paths"]:
+            links = collect_links(path)
+            for link in links:
+                scrape_page(link)
+    else:
+        links = collect_links(source["start_path"])
+        for link in links:
+            scrape_page(link)
+
+    return articles
 
 if __name__ == "__main__":
-    main()
+    print("\n▶ Starte OER-Scraping...")
+    all_articles = []
+    for src in OER_SOURCES:
+        print(f"\n🌐 {src['name']}...")
+        data = scrape_articles(src)
+        all_articles.extend(data)
+
+    with open("data/oer_texts.jsonl", "w") as f:
+        for item in all_articles:
+            json.dump(item, f, ensure_ascii=False)
+            f.write("\n")
+
+    print(f"\n✅ OER-Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → data/oer_texts.jsonl")
