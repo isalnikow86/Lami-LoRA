@@ -34,7 +34,6 @@ def scrape_articles(source):
     articles = []
     visited = set()
     counter = 0
-    limit = 50
 
     def scrape_page(url):
         nonlocal counter
@@ -43,6 +42,10 @@ def scrape_articles(source):
             if full_url in visited:
                 return
             visited.add(full_url)
+
+            # Duplikate durch Paginierung ignorieren
+            if "?page=" in full_url:
+                return
 
             res = requests.get(full_url, timeout=10)
             soup = BeautifulSoup(res.text, "html.parser")
@@ -54,23 +57,27 @@ def scrape_articles(source):
             text = content.get_text(separator="\n").strip()
 
             if len(text) > 200:
-                articles.append({"url": full_url, "title": title, "text": text})
+                articles.append({
+                    "url": full_url,
+                    "title": title,
+                    "text": text
+                })
                 counter += 1
                 print(f"✅ [{counter}] {title}")
 
-                if counter % limit == 0:
-                    print(f"🔁 {limit} Artikel gespeichert… fahre automatisch fort…")
-
+            time.sleep(0.25)  # freundlich crawlen
         except Exception as e:
             print(f"⚠ Fehler bei {url}: {e}")
 
     def collect_links(base_path):
         try:
-            res = requests.get(source["base_url"] + base_path, timeout=10)
+            res = requests.get(source["base_url"] + base_path, timeout=15)
             soup = BeautifulSoup(res.text, "html.parser")
             links = [a.get("href") for a in soup.select(source["article_selector"])]
+            print(f"🔍 {len(links)} Links gefunden auf {base_path}")
             return [l for l in links if l and "/" in l]
-        except:
+        except Exception as e:
+            print(f"⚠ Fehler beim Link-Sammeln: {e}")
             return []
 
     if "start_paths" in source:
@@ -93,7 +100,7 @@ if __name__ == "__main__":
         data = scrape_articles(src)
         all_articles.extend(data)
 
-    with open("data/oer_texts.jsonl", "w") as f:
+    with open("data/oer_texts.jsonl", "w", encoding="utf-8") as f:
         for item in all_articles:
             json.dump(item, f, ensure_ascii=False)
             f.write("\n")
