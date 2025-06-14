@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+import time
 
 BASE_URL = "https://www.kindersache.de"
 CATEGORIES = [
@@ -11,10 +12,10 @@ CATEGORIES = [
     "/bereiche/wissen/sport",
     "/bereiche/wissen/panorama",
     "/bereiche/wissen/medien",
-    "/bereiche/wissen/lernen",
-    "/bereiche/wissen/lexikon",
-    "/bereiche/wissen/journalisten-abc"
+    "/bereiche/wissen/lernen"
+    # lexikon und journalisten-abc bewusst ausgelassen
 ]
+
 ARTICLE_SELECTOR = "div.view-content a"
 CONTENT_SELECTOR = "div.field--name-body"
 
@@ -23,21 +24,20 @@ def collect_article_links(start_path):
         res = requests.get(BASE_URL + start_path, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         links = [a.get("href") for a in soup.select(ARTICLE_SELECTOR)]
-        links = [l for l in links if l and l.startswith("/bereiche/wissen/") and "/" in l]
-        print(f"➡ {len(links)} Links gefunden auf {start_path}")
+        links = [l for l in links if l and l.startswith("/bereiche/wissen") and "/" in l]
+        print(f"\u27a4 {len(links)} Links gefunden auf {start_path}")
         return links
     except Exception as e:
         print(f"⚠ Fehler beim Laden von {start_path}: {e}")
         return []
 
-def scrape_article(url, content_selector):
-    full_url = BASE_URL + url if not url.startswith("http") else url
+def scrape_article(url):
+    full_url = url if url.startswith("http") else BASE_URL + url
     try:
         res = requests.get(full_url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        content = soup.select_one(content_selector)
+        content = soup.select_one(CONTENT_SELECTOR)
         title = soup.title.text.strip() if soup.title else "No title"
-
         if content:
             text = content.get_text(separator="\n").strip()
             if len(text) > 200:
@@ -47,20 +47,22 @@ def scrape_article(url, content_selector):
     return None
 
 if __name__ == "__main__":
-    print("▶ Starte OER-Scraping kindersache.de (alle Wissen-Rubriken)...")
+    print("\n▶ Starte OER-Scraping kindersache.de (alle Wissen-Rubriken)...")
     all_articles = []
-
-    for path in CATEGORIES:
-        print(f"\n🔍 Scanning {BASE_URL + path}...")
-        links = collect_article_links(path)
+    for category in CATEGORIES:
+        print(f"\n🔍 Scanning {BASE_URL}{category}...")
+        links = collect_article_links(category)
         for link in links:
-            article = scrape_article(link, CONTENT_SELECTOR)
+            article = scrape_article(link)
             if article:
                 all_articles.append(article)
+                print(f"✅ {article['title']}")
+            time.sleep(0.5)  # freundlich bleiben
 
-    with open("data/kindersache_texts.jsonl", "w") as f:
-        for item in all_articles:
-            json.dump(item, f, ensure_ascii=False)
+    out_path = "data/kindersache_texts.jsonl"
+    with open(out_path, "w") as f:
+        for entry in all_articles:
+            json.dump(entry, f, ensure_ascii=False)
             f.write("\n")
 
-    print(f"\n✅ OER-Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → data/kindersache_texts.jsonl")
+    print(f"\n✅ OER-Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → {out_path}")
