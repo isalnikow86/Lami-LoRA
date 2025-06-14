@@ -19,7 +19,7 @@ KINDERSACHE_WISSEN_PATHS = [
 
 BASE_URL = "https://www.kindersache.de"
 ARTICLE_SELECTOR = "div.view-content a"
-CONTENT_SELECTOR = "div.field--name-body"
+CONTENT_SELECTO = "div.field__item.even"
 OUTPUT_FILE = "data/oer_texts.jsonl"
 
 
