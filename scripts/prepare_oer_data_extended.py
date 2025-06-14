@@ -1,65 +1,90 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-import time
+import os
 
-OER_URLS = [
-    "https://www.kindersache.de/bereiche/wissen/",
-    "https://www.hanisauland.de/wissen/lexikon/",
-    "https://www.planet-schule.de/sf/themenseite.php?seite=kindernetz",  # Beispiel, muss evtl. angepasst werden
-    "https://www.fragfinn.de/",
-    "https://www.geo.de/geolino/",
-    "https://www.kindernetz.de/wissen/frage-trifft-antwort-102.html",
-]
+# Zielverzeichnis
+os.makedirs("data", exist_ok=True)
+output_path = "data/oer_texts.jsonl"
 
-def scrape_url(url):
-    print(f"Scraping {url}...")
+articles = []
+
+# 1. Kindersache.de (https://www.kindersache.de/bereiche/wissen)
+def scrape_kindersache():
+    base_url = "https://www.kindersache.de"
+    start_url = base_url + "/bereiche/wissen"
+    res = requests.get(start_url)
+    soup = BeautifulSoup(res.text, "html.parser")
+    links = [a["href"] for a in soup.select("a.teaser") if a["href"].startswith("/")]
+    for link in links:
+        url = base_url + link
+        try:
+            r = requests.get(url)
+            s = BeautifulSoup(r.text, "html.parser")
+            title = s.find("h1").text.strip()
+            content = "\n".join(p.text.strip() for p in s.select(".text-content p"))
+            if content:
+                articles.append({"source": "kindersache", "title": title, "content": content})
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
+
+# 2. Hanisauland.de
+
+def scrape_hanisauland():
+    base_url = "https://www.hanisauland.de"
+    start_url = base_url + "/wissen/lexikon"
+    res = requests.get(start_url)
+    soup = BeautifulSoup(res.text, "html.parser")
+    links = [a["href"] for a in soup.select("a.c-teaser") if a["href"].startswith("/wissen/lexikon/")]
+    for link in links:
+        url = base_url + link
+        try:
+            r = requests.get(url)
+            s = BeautifulSoup(r.text, "html.parser")
+            title = s.find("h1").text.strip()
+            content = "\n".join(p.text.strip() for p in s.select(".o-article-text p"))
+            if content:
+                articles.append({"source": "hanisauland", "title": title, "content": content})
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
+
+# 3. FragFinn.de – keine kindgerechten Inhalte mehr auffindbar, daher auslassen
+
+# 4. Geolino.de – Zugriffsbeschränkungen, daher auslassen (außer wir nutzen Geolocation + Consent-Automation)
+
+# 5. Kindernetz FAQ (Artikel einzeln sammeln)
+def scrape_kindernetz():
+    url = "https://www.kindernetz.de/wissen/frage-trifft-antwort-100.html"
     try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Default fallback: get all <p> texts
-        paragraphs = soup.find_all("p")
-        text = "\n\n".join([p.get_text(strip=True) for p in paragraphs])
-
-        # site-specific tweaks → here you can add more later:
-        if "kindersache.de" in url:
-            content = soup.find("div", {"class": "field--name-body"})
-            if content:
-                text = content.get_text(strip=True)
-
-        elif "hanisauland.de" in url:
-            content = soup.find("div", {"class": "field--name-field-article-text"})
-            if content:
-                text = content.get_text(strip=True)
-
-        elif "geo.de" in url:
-            content = soup.find("article")
-            if content:
-                text = content.get_text(strip=True)
-
-        return text
-
+        res = requests.get(url)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = [a["href"] for a in soup.select("a.teaser") if a["href"].startswith("/")]
+        for link in links:
+            full_url = "https://www.kindernetz.de" + link
+            try:
+                r = requests.get(full_url)
+                s = BeautifulSoup(r.text, "html.parser")
+                title = s.find("h1").text.strip()
+                content = "\n".join(p.text.strip() for p in s.select(".text-content p"))
+                if content:
+                    articles.append({"source": "kindernetz", "title": title, "content": content})
+            except Exception as e:
+                print(f"Error scraping {full_url}: {e}")
     except Exception as e:
-        print(f"Error scraping {url}: {e}")
-        return ""
+        print(f"Error loading Kindernetz index page: {e}")
 
-# Main:
-if __name__ == "__main__":
-    texts = []
+# Ausführen:
+print("Scraping kindersache...")
+scrape_kindersache()
+print("Scraping hanisauland...")
+scrape_hanisauland()
+print("Scraping kindernetz...")
+scrape_kindernetz()
 
-    for url in OER_URLS:
-        text = scrape_url(url)
-        if text.strip():
-            texts.append({"source": url, "text": text})
-        time.sleep(1)  # polite crawling
+# Speichern
+with open(output_path, "w") as f:
+    for a in articles:
+        json.dump(a, f, ensure_ascii=False)
+        f.write("\n")
 
-    # Save to JSONL
-    output_path = "data/oer_texts.jsonl"
-    with open(output_path, "w", encoding="utf-8") as f:
-        for item in texts:
-            json.dump(item, f, ensure_ascii=False)
-            f.write("\n")
-
-    print(f"✅ Scraping complete. {len(texts)} articles saved to {output_path}")
+print(f"\n✅ Scraping complete. {len(articles)} articles saved to {output_path}")
