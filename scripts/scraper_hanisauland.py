@@ -33,24 +33,29 @@ def get_links(letter):
         return []
 
 
-def scrape_article(relative_url):
-    full_url = BASE_URL + relative_url
+def scrape_article(url):
     try:
-        res = requests.get(full_url, timeout=10)
+        res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        content = soup.select_one("main .text") or soup.select_one("div.text")
-        title = soup.title.text.strip() if soup.title else "Kein Titel"
+
+        # robuster Content-Selector
+        content = soup.select_one("main div.text") or soup.select_one("div.text")
+        title = soup.title.text.strip() if soup.title else "No title"
+
         if content:
             text = content.get_text(separator="\n").strip()
             if len(text) > 200:
-                return {"url": full_url, "title": title, "text": text}
+                return {"url": url, "title": title, "text": text}
             else:
-                print(f"⚠ Artikel zu kurz: {full_url}")
+                print(f"⚠ Artikel zu kurz: {url}")
         else:
-            print(f"⚠ Kein Content gefunden: {full_url}")
+            print(f"⚠ Kein Content gefunden: {url}")
+
     except Exception as e:
-        print(f"⚠ Fehler bei Artikel {full_url}: {e}")
+        print(f"⚠ Fehler bei Artikel {url}: {e}")
+
     return None
+
 
 
 if __name__ == "__main__":
