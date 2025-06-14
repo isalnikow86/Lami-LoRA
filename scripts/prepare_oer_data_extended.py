@@ -1,107 +1,97 @@
-import os
-import json
-import time
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import json
+import time
 
-# Zielverzeichnis für gesammelte Artikel
-output_path = "data/oer_texts.jsonl"
-os.makedirs("data", exist_ok=True)
+OUTPUT_PATH = "data/oer_texts.jsonl"
 
-articles = []
+# Zielbereiche definieren
+TARGETS = {
+    "kindersache.de": {
+        "base": "https://www.kindersache.de",
+        "start": "https://www.kindersache.de/bereiche/wissen/natur-und-mensch",
+        "include": ["/bereiche/wissen/natur-und-mensch"],
+    },
+    "hanisauland.de": {
+        "base": "https://www.hanisauland.de",
+        "start": "https://www.hanisauland.de/wissen/lexikon/grosses-lexikon/a",
+        "include": ["/wissen/lexikon/grosses-lexikon/"],
+    },
+    "geo.de": {
+        "base": "https://www.geo.de",
+        "start": "https://www.geo.de/geolino/tierlexikon",
+        "include": ["/geolino/tierlexikon", "/geolino/mensch"],
+    }
+}
 
-def save_articles():
-    with open(output_path, "w", encoding="utf-8") as f:
-        for article in articles:
-            f.write(json.dumps(article, ensure_ascii=False) + "\n")
-    print(f"\n✅ Scraping complete. {len(articles)} articles saved to {output_path}")
+def fetch_article(url):
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            return None
+        soup = BeautifulSoup(response.text, "html.parser")
 
-def scrape_kindersache():
-    print("Scraping kindersache...")
-    base_url = "https://www.kindersache.de"
-    start_url = base_url + "/bereiche/wissen"
-    res = requests.get(start_url)
-    soup = BeautifulSoup(res.text, "html.parser")
-    links = soup.select(".view-content a")
+        # Extrahiere sichtbaren Text
+        article = soup.find("article") or soup.find("main")
+        if not article:
+            return None
+        text = article.get_text(separator="\n", strip=True)
+        if len(text) < 200:
+            return None
+        title = soup.title.string if soup.title else ""
+        return {"url": url, "title": title, "text": text}
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return None
+
+def collect_links(base_url, start_url, includes):
     visited = set()
+    to_visit = [start_url]
+    found_links = []
 
-    for link in links:
-        href = link.get("href")
-        if href and "/bereiche/wissen/" in href and href not in visited:
-            visited.add(href)
-            url = urljoin(base_url, href)
-            try:
-                page = requests.get(url)
-                page_soup = BeautifulSoup(page.text, "html.parser")
-                title = page_soup.find("h1").text.strip()
-                body = page_soup.find("div", class_="field--name-body")
-                if body:
-                    text = body.get_text(" ", strip=True)
-                    articles.append({"source": "kindersache", "title": title, "url": url, "text": text})
-            except Exception as e:
-                print(f"❌ Error scraping {url}: {e}")
-            time.sleep(0.5)
+    while to_visit:
+        url = to_visit.pop()
+        if url in visited:
+            continue
+        visited.add(url)
+        print(f"🔎 Scanning {url}")
+        try:
+            response = requests.get(url)
+            if response.status_code != 200:
+                continue
+            soup = BeautifulSoup(response.text, "html.parser")
+            for a in soup.find_all("a", href=True):
+                href = a["href"]
+                if href.startswith("/") and any(inc in href for inc in includes):
+                    full_url = base_url + href
+                    if full_url not in visited and full_url not in to_visit:
+                        to_visit.append(full_url)
+                        if href.count("/") >= 4:  # primitive Artikel-Filterung
+                            found_links.append(full_url)
+        except Exception as e:
+            print(f"Failed to scan {url}: {e}")
+            continue
+        time.sleep(0.5)
+    return list(set(found_links))
 
-def scrape_hanisauland():
-    print("Scraping hanisauland...")
-    base_url = "https://www.hanisauland.de"
-    lexikon_base = base_url + "/wissen/lexikon/grosses-lexikon"
+def main():
+    all_articles = []
+    print("\n✏ Starte OER-Scraping...")
+    for domain, config in TARGETS.items():
+        print(f"\n🌐 {domain}...")
+        links = collect_links(config["base"], config["start"], config["include"])
+        print(f"→ {len(links)} potenzielle Artikel gefunden")
+        for url in links:
+            art = fetch_article(url)
+            if art:
+                all_articles.append(art)
+            time.sleep(0.2)
 
-    for letter in "abcdefghijklmnopqrstuvwxyz":
-        url = f"{lexikon_base}/{letter}/"
-        res = requests.get(url)
-        soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("a.teaser")
-
-        for link in links:
-            href = link.get("href")
-            full_url = urljoin(base_url, href)
-            try:
-                page = requests.get(full_url)
-                page_soup = BeautifulSoup(page.text, "html.parser")
-                title = page_soup.find("h1").text.strip()
-                body = page_soup.find("div", class_="article-text")
-                if body:
-                    text = body.get_text(" ", strip=True)
-                    articles.append({"source": "hanisauland", "title": title, "url": full_url, "text": text})
-            except Exception as e:
-                print(f"❌ Error scraping {full_url}: {e}")
-            time.sleep(0.5)
-
-def scrape_geolino():
-    print("Scraping geo.de...")
-    base_url = "https://www.geo.de"
-    sections = [
-        "/geolino/tierlexikon/",
-        "/geolino/mensch/",
-        "/geolino/natur/",
-    ]
-    for section in sections:
-        for i in range(1, 6):  # nur erste Seiten durchgehen
-            url = base_url + section + f"?page={i}"
-            res = requests.get(url)
-            soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.select("a.card-teaser")
-
-            for link in links:
-                href = link.get("href")
-                full_url = urljoin(base_url, href)
-                try:
-                    page = requests.get(full_url)
-                    page_soup = BeautifulSoup(page.text, "html.parser")
-                    title = page_soup.find("h1").text.strip()
-                    body = page_soup.find("div", class_="article-body")
-                    if body:
-                        text = body.get_text(" ", strip=True)
-                        articles.append({"source": "geolino", "title": title, "url": full_url, "text": text})
-                except Exception as e:
-                    print(f"❌ Error scraping {full_url}: {e}")
-                time.sleep(0.5)
+    print(f"\n✅ Fertig! {len(all_articles)} Artikel gespeichert unter {OUTPUT_PATH}")
+    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
+        for entry in all_articles:
+            json.dump(entry, f, ensure_ascii=False)
+            f.write("\n")
 
 if __name__ == "__main__":
-    print("✏ OER Daten vorbereiten:")
-    scrape_kindersache()
-    scrape_hanisauland()
-    scrape_geolino()
-    save_articles()
+    main()
