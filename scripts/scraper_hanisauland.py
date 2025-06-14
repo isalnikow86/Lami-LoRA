@@ -13,7 +13,7 @@ def get_links_for_letter(letter):
     try:
         res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("a.teaser__link")
+        links = soup.select("a.c-teaser__link")  # neuer selector!
         hrefs = [a["href"] for a in links if a.has_attr("href") and a["href"].startswith("/wissen/lexikon/grosses-lexikon/")]
         print(f"🔗 {len(hrefs)} Links gefunden")
         return hrefs
