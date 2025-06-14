@@ -38,7 +38,7 @@ def scrape_article(relative_url):
     try:
         res = requests.get(full_url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        content = soup.select_one("main .text")
+        content = soup.select_one("main .text") or soup.select_one("div.text")
         title = soup.title.text.strip() if soup.title else "Kein Titel"
         if content:
             text = content.get_text(separator="\n").strip()
