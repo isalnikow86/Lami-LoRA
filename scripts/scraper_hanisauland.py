@@ -1,54 +1,61 @@
-# scripts/scraper_hanisauland.py
 import requests
 from bs4 import BeautifulSoup
 import json
 import time
-import string
 
-def scrape_hanisauland():
-    base_url = "https://www.hanisauland.de"
-    lexikon_base = "/wissen/lexikon/grosses-lexikon/"
-    articles = []
-    counter = 0
-    visited = set()
-    letters = list(string.ascii_lowercase)
+BASE_URL = "https://www.hanisauland.de"
+ALPHABET = list("abcdefghijklmnopqrstuvwxyz")
+ARTICLE_SELECTOR = "ul.linklist__list a"
+CONTENT_SELECTOR = "div.text"
 
-    for letter in letters:
-        print(f"\n🔤 Buchstabe {letter.upper()}...")
-        index_url = base_url + lexikon_base + letter
-        try:
-            res = requests.get(index_url, timeout=10)
-            soup = BeautifulSoup(res.text, "html.parser")
-            links = soup.select("ul.linklist__list a")
-            print(f"🔍 {len(links)} Links gefunden auf {lexikon_base + letter}")
-        except:
-            continue
+def get_links(letter):
+    url = f"{BASE_URL}/wissen/lexikon/grosses-lexikon/{letter}"
+    try:
+        res = requests.get(url, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        links = [a.get("href") for a in soup.select(ARTICLE_SELECTOR)]
+        links = [l for l in links if l and l.startswith("/wissen/lexikon/grosses-lexikon/")]
+        print(f"🔡 Buchstabe {letter.upper()} – {len(links)} Links gefunden")
+        return links
+    except Exception as e:
+        print(f"⚠ Fehler beim Laden von {url}: {e}")
+        return []
 
-        for a in links:
-            href = a.get("href")
-            if not href or href in visited:
-                continue
-            visited.add(href)
-            url = base_url + href
-            try:
-                res = requests.get(url, timeout=10)
-                soup = BeautifulSoup(res.text, "html.parser")
-                content = soup.select_one("div.text")
-                title = soup.title.text.strip()
-                text = content.get_text(separator="\n").strip() if content else ""
-                if len(text) > 200:
-                    articles.append({"url": url, "title": title, "text": text})
-                    counter += 1
-                    print(f"✅ [{counter}] {title}")
-            except:
-                pass
-
-    with open("data/oer_texts_hanisauland.jsonl", "w") as f:
-        for article in articles:
-            json.dump(article, f, ensure_ascii=False)
-            f.write("\n")
-
-    print(f"\n✅ Hanisauland Scraping abgeschlossen. {counter} Artikel gespeichert → data/oer_texts_hanisauland.jsonl")
+def scrape_article(url):
+    full_url = BASE_URL + url
+    try:
+        res = requests.get(full_url, timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        content = soup.select_one(CONTENT_SELECTOR)
+        if not content:
+            print(f"⚠ Kein Inhalt bei {full_url}")
+            return None
+        title = soup.title.text.strip() if soup.title else "Kein Titel"
+        text = content.get_text(separator="\n").strip()
+        if len(text) > 200:
+            return {"url": full_url, "title": title, "text": text}
+    except Exception as e:
+        print(f"⚠ Fehler bei {full_url}: {e}")
+    return None
 
 if __name__ == "__main__":
-    scrape_hanisauland()
+    print("\n▶ Starte Scraping hanisauland.de (Großes Lexikon)...")
+    all_articles = []
+
+    for letter in ALPHABET:
+        links = get_links(letter)
+        time.sleep(1)
+        for link in links:
+            article = scrape_article(link)
+            if article:
+                all_articles.append(article)
+                print(f"✅ Artikel gespeichert: {article['title']}")
+            time.sleep(0.5)
+
+    out_path = "data/oer_texts_hanisauland.jsonl"
+    with open(out_path, "w") as f:
+        for item in all_articles:
+            json.dump(item, f, ensure_ascii=False)
+            f.write("\n")
+
+    print(f"\n✅ Hanisauland Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → {out_path}")
