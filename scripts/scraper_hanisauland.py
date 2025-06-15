@@ -36,7 +36,7 @@ def scrape_article(relative_url):
     try:
         res = requests.get(full_url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        content = soup.select_one("div.textcontent")  # <-- Korrektur hier!
+        content = soup.select_one("article.article-text")  # neuer funktionierender Selector!
         title = soup.title.text.strip() if soup.title else "Kein Titel"
         if content:
             text = content.get_text(separator="\n").strip()
@@ -49,6 +49,7 @@ def scrape_article(relative_url):
     except Exception as e:
         print(f"⚠ Fehler bei Artikel {full_url}: {e}")
     return None
+
 
 
 if __name__ == "__main__":
