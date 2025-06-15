@@ -1,7 +1,28 @@
 base_model: LeoLM/leo-hessianai-7b
-output_dir: lora-outputs/combined/
-learning_rate: 5e-5
+output_dir: lora-outputs/combined
+
+# Training Hyperparameter
+learning_rate: 2e-4
 batch_size: 1
-num_train_epochs: 1            # nur 1 Epoche zum Testen
+num_train_epochs: 3
 logging_steps: 10
-save_steps: -1                 # kein automatisches Speichern
+save_steps: 100
+gradient_checkpointing: true
+
+# LoRA Konfiguration
+peft_config:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  bias: none
+  task_type: CAUSAL_LM
+  target_modules:
+    - q_proj
+    - v_proj
+    # Alternativ: nur einzelne Layer, z. B. ['model.layers.30.q_proj', 'model.layers.30.v_proj'] etc.
+
+# BitsAndBytes für Speicherreduktion (8bit)
+bnb_config:
+  load_in_8bit: true
+  llm_int8_threshold: 6.0
+  llm_int8_has_fp16_weight: true
