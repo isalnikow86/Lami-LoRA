@@ -21,7 +21,6 @@ tokenizer.pad_token = tokenizer.eos_token  # falls nicht gesetzt
 # Load dataset
 dataset = load_from_disk("data/tokenized_combined")
 
-# Define TrainingArguments
 training_args = TrainingArguments(
     output_dir=config["output_dir"],
     learning_rate=float(config["learning_rate"]),
@@ -29,11 +28,13 @@ training_args = TrainingArguments(
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
     save_steps=config["save_steps"],
-    gradient_checkpointing=False,
+    gradient_checkpointing=True,     # ✅ reduziert RAM massiv
     bf16=True,
     fp16=False,
     optim="adamw_torch_fused",
+    torch_compile=True               # ✅ optionaler Boost
 )
+
 
 # Define Data Collator
 def data_collator(features):
