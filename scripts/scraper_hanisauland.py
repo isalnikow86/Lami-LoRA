@@ -2,10 +2,13 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import time
+import string
 
 BASE_URL = "https://www.hanisauland.de"
-OUTPUT_FILE = "data/oer_texts_hanisauland.jsonl"
 LEXIKON_BASE = "/wissen/lexikon/grosses-lexikon/"
+
+OUTPUT_FILE = "data/oer_texts_hanisauland.jsonl"
+LETTERS = list(string.ascii_lowercase)
 
 def get_links_for_letter(letter):
     url = BASE_URL + LEXIKON_BASE + letter + "/"
@@ -13,54 +16,49 @@ def get_links_for_letter(letter):
     try:
         res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("a.m-card__title-link")  # FIXED
-        hrefs = [a["href"] for a in links if a.has_attr("href") and "/wissen/lexikon/grosses-lexikon/" in a["href"]]
+        links = soup.select("a.lexicon-list__entry")  # ✅ funktionierender Selector
+        hrefs = [a["href"] for a in links if a.has_attr("href")]
         print(f"🔗 {len(hrefs)} Links gefunden")
         return hrefs
     except Exception as e:
         print(f"⚠ Fehler beim Laden von {url}: {e}")
         return []
 
-def scrape_article(url):
+def scrape_article(path):
+    full_url = BASE_URL + path if path.startswith("/") else path
     try:
-        if not url.startswith("http"):
-            url = BASE_URL + url
-
-        res = requests.get(url, timeout=10)
+        res = requests.get(full_url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
+        content = soup.select_one("div.text")  # Inhalt des Lexikon-Artikels
+        if not content:
+            print(f"⚠ Kein Content gefunden: {full_url}")
+            return None
 
-        content = soup.select_one("div.c-rte--article")  # korrekter Content-Block
         title = soup.title.text.strip() if soup.title else "Kein Titel"
-
-        if content:
-            text = content.get_text(separator="\n").strip()
-            if len(text) > 200:
-                print(f"✅ Artikel gescraped: {title}")
-                return {"url": url, "title": title, "text": text}
-            else:
-                print(f"⚠ Artikel zu kurz: {url}")
+        text = content.get_text(separator="\n").strip()
+        if len(text) > 200:
+            return {"url": full_url, "title": title, "text": text}
         else:
-            print(f"⚠ Kein Content gefunden: {url}")
-
+            print(f"⚠ Artikel zu kurz: {full_url}")
     except Exception as e:
-        print(f"⚠ Fehler bei Artikel {url}: {e}")
+        print(f"⚠ Fehler bei Artikel {path}: {e}")
     return None
 
 if __name__ == "__main__":
     print("▶ Starte Scraping hanisauland.de (Großes Lexikon)...")
     all_articles = []
 
-    for letter in "abcdefghijklmnopqrstuvwxyz":
+    for letter in LETTERS:
         links = get_links_for_letter(letter)
         for link in links:
             article = scrape_article(link)
             if article:
                 all_articles.append(article)
-            time.sleep(0.5)
+            time.sleep(0.3)
 
     with open(OUTPUT_FILE, "w") as f:
-        for entry in all_articles:
-            json.dump(entry, f, ensure_ascii=False)
+        for item in all_articles:
+            json.dump(item, f, ensure_ascii=False)
             f.write("\n")
 
     print(f"\n✅ Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → {OUTPUT_FILE}")
