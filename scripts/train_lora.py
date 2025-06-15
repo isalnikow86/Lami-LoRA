@@ -28,11 +28,13 @@ training_args = TrainingArguments(
     num_train_epochs=config["num_train_epochs"],
     logging_steps=config["logging_steps"],
     save_steps=config["save_steps"],
-    gradient_checkpointing=False,  # für Stabilität, FP16 + H100 + bnb safe
-    bf16=True,  # H100 unterstützt BF16 → effizient
-    fp16=False,  # wenn bf16 geht → kein fp16 zusätzlich
-    optim="adamw_torch_fused",  # beste performance mit H100
+    gradient_checkpointing=True,     # ✅ reduziert RAM massiv
+    bf16=True,
+    fp16=False,
+    optim="adamw_torch_fused",
+    torch_compile=True               # ✅ optionaler Boost
 )
+
 
 # Define Data Collator
 def data_collator(features):
