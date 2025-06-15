@@ -10,19 +10,21 @@ LEXIKON_BASE = "/wissen/lexikon/grosses-lexikon/"
 OUTPUT_FILE = "data/oer_texts_hanisauland.jsonl"
 LETTERS = list(string.ascii_lowercase)
 
-def get_links_for_letter(letter):
+def get_links(letter):
     url = BASE_URL + LEXIKON_BASE + letter + "/"
-    print(f"\n🔡 Buchstabe {letter.upper()}... 🔍 Lade {url}")
+    print(f"🔍 Lade {url}")
     try:
         res = requests.get(url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = soup.select("a.lexicon-list__entry")  # ✅ funktionierender Selector
-        hrefs = [a["href"] for a in links if a.has_attr("href")]
-        print(f"🔗 {len(hrefs)} Links gefunden")
-        return hrefs
+
+        # Richtiges Element für Artikel-Links
+        links = [a["href"] for a in soup.select("a.dictionary-word") if a.has_attr("href")]
+        print(f"🔗 {len(links)} Links gefunden")
+        return links
     except Exception as e:
-        print(f"⚠ Fehler beim Laden von {url}: {e}")
+        print(f"⚠ Fehler beim Laden der Seite {url}: {e}")
         return []
+
 
 def scrape_article(path):
     full_url = BASE_URL + path if path.startswith("/") else path
