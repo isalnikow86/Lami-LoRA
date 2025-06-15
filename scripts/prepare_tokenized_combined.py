@@ -10,7 +10,7 @@ DATA_FILES = [
     "data/kindersache_texts.jsonl",
     "data/oer_zum_texts.jsonl"
 ]
-TOKENIZER_NAME = "LeoLM/leo-mistral-hessian-ai"
+TOKENIZER_NAME = "LeoLM/leo-hessianai-7b"  # ✅ korrekt und öffentlich verfügbar
 OUTPUT_PATH = "data/tokenized_combined"
 
 def load_texts(files):
