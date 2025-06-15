@@ -1,71 +1,71 @@
-
 import requests
 from bs4 import BeautifulSoup
 import json
+import time
 
-GEO_START_PATHS = [
-    "/geolino/tierlexikon/",
-    "/geolino/redewendungen/",
-    "/geolino/berufe/"
+BASE_URL = "https://www.geo.de"
+OUTPUT_FILE = "data/geo_texts.jsonl"
+
+CATEGORIES = [
+    "/geolino/tierlexikon-21334.html",
+    "/geolino/redewendungen-21968.html",
+    "/geolino/berufe-10151.html"
 ]
 
-GEO_BASE = "https://www.geo.de"
+ARTICLE_SELECTOR = "a.o-teaser-standard__link"
+CONTENT_SELECTOR = "div.c-article-text"
 
 
-def collect_geo_links(start_path):
+def get_article_links(category_url):
     try:
-        res = requests.get(GEO_BASE + start_path, timeout=10)
-        res.raise_for_status()
+        res = requests.get(BASE_URL + category_url, timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
-        links = [a.get("href") for a in soup.find_all("a", href=True)]
-        return [l for l in links if l and l.startswith(start_path)]
+        links = [a["href"] for a in soup.select(ARTICLE_SELECTOR) if a.has_attr("href") and a["href"].startswith("/geolino/")]
+        return list(set(links))
     except Exception as e:
-        print(f"❌ Fehler beim Abrufen von {start_path}: {e}")
+        print(f"⚠ Fehler beim Laden von {category_url}: {e}")
         return []
 
 
-def scrape_geo_article(url):
+def scrape_article(path):
+    full_url = BASE_URL + path if path.startswith("/") else path
     try:
-        full_url = url if url.startswith("http") else GEO_BASE + url
         res = requests.get(full_url, timeout=10)
-        res.raise_for_status()
         soup = BeautifulSoup(res.text, "html.parser")
-
+        content = soup.select_one(CONTENT_SELECTOR)
         title = soup.title.text.strip() if soup.title else "Kein Titel"
-        content_tag = soup.find("div", class_="c-article-text")
-        if content_tag:
-            text = content_tag.get_text(separator="\n").strip()
+        if content:
+            text = content.get_text(separator="\n").strip()
             if len(text) > 200:
                 return {"url": full_url, "title": title, "text": text}
+            else:
+                print(f"⚠ Artikel zu kurz: {full_url}")
+        else:
+            print(f"⚠ Kein Content gefunden: {full_url}")
     except Exception as e:
-        print(f"⚠ Fehler bei {url}: {e}")
+        print(f"⚠ Fehler bei Artikel {full_url}: {e}")
     return None
 
 
-def run_scraper():
-    print("\n▶ Starte GEO-Scraper...")
+if __name__ == "__main__":
+    print("\n▶ Starte GEO-Scraper...\n")
     all_articles = []
-    visited = set()
-    for path in GEO_START_PATHS:
-        print(f"\n🔍 Scanne Bereich: {path}")
-        links = collect_geo_links(path)
-        print(f"🔗 {len(links)} Links gefunden")
-        for link in links:
-            if link in visited:
-                continue
-            visited.add(link)
-            article = scrape_geo_article(link)
-            if article:
-                all_articles.append(article)
-                print(f"✅ {article['title']}")
 
-    with open("data/geo_texts.jsonl", "w") as f:
+    for category in CATEGORIES:
+        print(f"🔍 Scanne Bereich: {category}")
+        links = get_article_links(category)
+        print(f"🔗 {len(links)} Links gefunden\n")
+
+        for link in links:
+            data = scrape_article(link)
+            if data:
+                all_articles.append(data)
+                print(f"✅ {data['title']}")
+            time.sleep(0.3)
+
+    with open(OUTPUT_FILE, "w") as f:
         for item in all_articles:
             json.dump(item, f, ensure_ascii=False)
             f.write("\n")
 
-    print(f"\n✅ GEO-Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → data/geo_texts.jsonl")
-
-
-if __name__ == "__main__":
-    run_scraper()
+    print(f"\n✅ GEO-Scraping abgeschlossen. {len(all_articles)} Artikel gespeichert → {OUTPUT_FILE}")
