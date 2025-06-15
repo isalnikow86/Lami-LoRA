@@ -50,13 +50,18 @@ if __name__ == "__main__":
     print("▶ Starte Scraping hanisauland.de (Großes Lexikon)...")
     all_articles = []
 
-    for letter in LETTERS:
-        links = get_links_for_letter(letter)
-        for link in links:
-            article = scrape_article(link)
-            if article:
-                all_articles.append(article)
-            time.sleep(0.3)
+    for letter in string.ascii_lowercase:
+    print(f"🔡 Buchstabe {letter.upper()}...", end=" ")
+    links = get_links(letter)  # ← hier korrigiert!
+    print(f"{len(links)} Links gefunden")
+
+    for link in links:
+        data = scrape_article(link)
+        if data:
+            all_articles.append(data)
+            print(f"✅ {data['title']}")
+        time.sleep(0.3)
+
 
     with open(OUTPUT_FILE, "w") as f:
         for item in all_articles:
