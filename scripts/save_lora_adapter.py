@@ -1,13 +1,12 @@
-# scripts/save_lora_adapter.py
-
-from peft import PeftModel, get_peft_model_state_dict
+from peft import PeftModel
 from transformers import AutoModelForCausalLM
 import torch
 
-# Manuell nachtrainiertes Modell + Adapter
+# Base + bereits trainierter Adapter
 BASE_MODEL = "LeoLM/leo-hessianai-7b"
-LORA_CHECKPOINT_DIR = "lora-outputs/combined"  # Zielordner erneut verwenden
+LORA_CHECKPOINT_DIR = "lora-outputs/combined"
 
+# Modell laden
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL,
     torch_dtype=torch.float16,
@@ -15,9 +14,10 @@ model = AutoModelForCausalLM.from_pretrained(
     trust_remote_code=True
 )
 
-# Adapter direkt im Modell gespeichert (Training lief korrekt durch)
-# → einfach nochmal speichern
-peft_model = PeftModel(model, LORA_CHECKPOINT_DIR)
+# LoRA-Adapterschichten laden aus bereits vorhandenem Verzeichnis
+peft_model = PeftModel.from_pretrained(model, LORA_CHECKPOINT_DIR)
+
+# Adapter erneut speichern, inkl. adapter_config.json
 peft_model.save_pretrained(LORA_CHECKPOINT_DIR)
 
-print("✅ LoRA-Adapter nachträglich gespeichert.")
+print("✅ LoRA-Adapter erfolgreich gespeichert.")
