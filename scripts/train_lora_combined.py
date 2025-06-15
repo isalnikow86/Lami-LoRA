@@ -18,8 +18,8 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained(config["base_model"])
 tokenizer.pad_token = tokenizer.eos_token  # falls nicht gesetzt
 
-# Load dataset
-dataset = load_from_disk("data/tokenized_combined")
+dataset = load_from_disk("data/tokenized_klexikon_dataset").select(range(500))
+
 
 training_args = TrainingArguments(
     output_dir=config["output_dir"],
