@@ -1,7 +1,7 @@
 base_model: LeoLM/leo-hessianai-7b
-output_dir: lora-outputs/combined
-learning_rate: 2e-5 
+output_dir: lora-outputs/combined/
+learning_rate: 5e-5
 batch_size: 1
-num_train_epochs: 3
+num_train_epochs: 1            # nur 1 Epoche zum Testen
 logging_steps: 10
-save_steps: 100
+save_steps: -1                 # kein automatisches Speichern
