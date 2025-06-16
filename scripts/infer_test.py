@@ -26,9 +26,9 @@ system_prompt = (
 
 def ask_model(user_prompt: str, max_new_tokens=128):
     full_prompt = (
-        f"<|system|>\n{system_prompt}\n"
-        f"<|user|>\n{user_prompt}\n"
-        "<|assistant|>\n"
+        "Du bist ein freundlicher Lernbegleiter für Kinder im Alter von 4–8 Jahren. "
+        "Du erklärst Dinge in einfacher Sprache, liebevoll und sicher.\n\n"
+        f"Frage: {user_prompt}\nAntwort:"
     )
     input_ids = tokenizer(full_prompt, return_tensors="pt").input_ids.to(model.device)
     with torch.no_grad():
