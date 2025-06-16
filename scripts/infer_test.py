@@ -1,9 +1,7 @@
 from transformers import AutoModelForCausalLM, LlamaTokenizer
-import torch
-from pathlib import Path
+import torchfrom pathlib import Path
 
-# 🔧 Absoluter Pfad zur Modellordner auflösen
-MODEL_DIR = Path("../merged-models").resolve()
+MODEL_DIR = Path("/workspace/Lami-LoRA/merged-models/combined-merged")
 
 # ✅ Tokenizer laden
 tokenizer = LlamaTokenizer.from_pretrained(
