@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, LlamaTokenizer
 import torch
 
 MODEL_DIR = "../merged-models/combined-merged"
