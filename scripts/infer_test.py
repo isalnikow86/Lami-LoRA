@@ -1,13 +1,18 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
-MODEL_DIR = "../merged-models/combined-merged"  # relativer Pfad vom scripts-Ordner aus
+MODEL_DIR = "../merged-models/combined-merged"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR, use_fast=False)
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_DIR, 
+    use_fast=False,
+    local_files_only=True
+)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-    device_map="auto"
+    device_map="auto",
+    local_files_only=True
 )
 
 def ask_model(prompt: str, max_new_tokens=128):
