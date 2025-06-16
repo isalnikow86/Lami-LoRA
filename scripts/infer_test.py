@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, LlamaTokenizer
+from transformers import LlamaForCausalLM
 from pathlib import Path
 import torch
 
