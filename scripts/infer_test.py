@@ -1,9 +1,9 @@
 from transformers import AutoModelForCausalLM, LlamaTokenizer
-import torchfrom pathlib import Path
+from pathlib import Path
+import torch
 
 MODEL_DIR = Path("/workspace/Lami-LoRA/merged-models/combined-merged")
 
-# ✅ Tokenizer laden
 tokenizer = LlamaTokenizer.from_pretrained(
     MODEL_DIR,
     use_fast=False,
@@ -11,7 +11,6 @@ tokenizer = LlamaTokenizer.from_pretrained(
     trust_remote_code=True
 )
 
-# ✅ Modell laden
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
