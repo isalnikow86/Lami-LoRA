@@ -7,7 +7,7 @@ MODEL_DIR = Path("/workspace/Lami-LoRA/merged-models/combined-merged")
 tokenizer = LlamaTokenizer.from_pretrained(
     MODEL_DIR,
     use_fast=False,
-    local_files_only=True,
+    local_files_only=True,             # 🟢 wichtig
     trust_remote_code=True
 )
 
@@ -15,9 +15,10 @@ model = AutoModelForCausalLM.from_pretrained(
     MODEL_DIR,
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     device_map="auto",
-    local_files_only=True,
-    trust_remote_code=True
+    local_files_only=True,             # 🟢 wichtig
+    trust_remote_code=True             # 🟢 wichtig bei custom Models wie LeoLM
 )
+
 
 # 🧒 Systemprompt
 system_prompt = (
