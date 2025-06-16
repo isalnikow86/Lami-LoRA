@@ -2,7 +2,8 @@ from transformers import AutoModelForCausalLM, LlamaTokenizer
 import torch
 
 # 🔧 Modellverzeichnis anpassen, falls nötig
-MODEL_DIR = "../merged-models/combined-merged"
+MODEL_DIR = "../merged-models"
+
 
 # 🔄 Tokenizer und Modell lokal laden
 tokenizer = LlamaTokenizer.from_pretrained(
